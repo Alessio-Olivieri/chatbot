@@ -117,7 +117,7 @@ def get_reflection(client,full_prompt,llm_response,model):
 
     Ensure that the following rules are satisfied when correcting your response:
     1. SQL is valid DuckDB SQL, given the provided metadata and the DuckDB querying rules
-    2. The query SPECIFICALLY references the correct tables: employees.csv and purchases.csv, and those tables are properly aliased? (this is the most likely cause of failure)
+    2. The query SPECIFICALLY references the correct tables: employees.csv, purchases.csv and data.csv; are those tables are properly aliased? (this is the most likely cause of failure)
     3. Response is in the correct format ({{sql: <sql_here>}} or {{"error": <explanation here>}}) with no additional text?
     4. All fields are appropriately named
     5. There are no unnecessary sub-queries
@@ -178,23 +178,23 @@ def main():
     groq_api_key = st.secrets["GROQ_API_KEY"]
     client = Groq(
         api_key=groq_api_key,
-        base_url=st.secrets["GROQ_BASE_URL"]
     )
 
     # Set up the Streamlit interface
     spacer, col = st.columns([5, 1])  
-    with col:  
-        st.image('groqcloud_darkmode.png')
 
     st.title("DuckDB Query Generator")
-    st.write('Welcome! Feel free to ask questions about the data contained in the `employees.csv` and `purchases.csv` files. You might ask about specific employee details or inquire about purchase records. For example, you could ask "Who are the employees?" or "What are the most recent purchases?". The application matches your question to SQL queries to provide accurate and relevant results. Enjoy exploring the data!')
+    st.write("Ciao! Benvenuto nel servizio di informazioni sull'arrivo della merce.\
+             Per favore, chiedi qualcosa di specifico sui dati disponibili. Ad esempio,\
+              puoi chiedere: 'Quanti ordini sono stati effettuati da ciascun cliente?' oppure 'Qual è il totale delle vendite per ciascun prodotto?'\
+             Potresti dirmi il tuo codice ordine che inizia con '1R2'?")
 
     # Set up the customization options
     st.sidebar.title('Customization')
     additional_context = st.sidebar.text_input('Enter additional summarization context for the LLM here (i.e. write it in spanish):')
     model = st.sidebar.selectbox(
         'Choose a model',
-        ['llama3-8b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it']
+        ['llama3-8b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it', 'llama3-70b-8192']
     )
     max_num_reflections = st.sidebar.slider('Max reflections:', 0, 10, value=5)
 

@@ -1,0 +1,15 @@
+id,codice, Nome_e_Cognome, Oggetto, Stato
+1,1R2432105,Marco Rossi,Soggiorno,SI
+2,1R2985672,Anna Bianchi,Cucina,NO
+3,1R2176985,Giulia Esposito,Divano,SI
+4,1R2985672,Anna Bianchi,Letto,SI
+5,1R2432105,Marco Rossi,Letto,SI
+6,1R2176985,Giulia Esposito,Letto,NO
+7,1R2432105,Marco Rossi,Letto,SI
+8,1R2176985,Giulia Esposito,Letto,SI
+9,1R2985672,Anna Bianchi,Letto,SI
+10,1R2176985,Giulia Esposito,Letto,SI
+11,1R2432105,Marco Rossi,Letto,SI
+12,1R2985672,Anna Bianchi,Letto,SI
+13,1R2176985,Giulia Esposito,Letto,SI
+
