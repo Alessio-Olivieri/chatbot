@@ -189,8 +189,8 @@ def get_private_database(code):
         code = code[index:index+9]
     
     conn = duckdb.connect(database=':memory:', read_only=False)
-    database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Codice = ?", [code]).fetchdf().reset_index(drop=True)
     user = (conn.execute(f"SELECT DISTINCT Nome_e_Cognome FROM data.csv WHERE Codice = ?", [code]).fetchdf().reset_index(drop=True))
+    database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Nome_e_Cognome = ?", [user]).fetchdf().reset_index(drop=True)
     try:
         user = user.iat[0,0]
     except:
