@@ -183,10 +183,14 @@ def get_private_database(code):
 
     conn = duckdb.connect(database=':memory:', read_only=False)
     database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Codice = '{code}'").fetchdf().reset_index(drop=True)
-
+    user = (conn.execute(f"SELECT DISTINCT Nome_e_Cognome FROM data.csv WHERE Codice = '{code}'").fetchdf().reset_index(drop=True))
+    try:
+        user = user.iat[0,0]
+    except:
+        pass
     os.chdir(original_cwd)
 
-    return database_subset
+    return database_subset, user
 
 
 
@@ -237,27 +241,35 @@ def main():
     # Get the user's question
     user_question = st.chat_input("Ask a question")
     
+    # Initialize the 'to_login' session state variable to False
     if 'to_login' not in st.session_state:
         st.session_state.to_login = True
 
     # If the user has asked a question, process it
     if user_question:
+
         # Add user question to chat history
         st.session_state.messages.append({"role": "user", "content": user_question})
         
-        # If the user is giving in input the code
+        # If the user has to log in
         if st.session_state.to_login:
-            #Create a subset of the database where the user can interact
-            database_subset = get_private_database(user_question)
-            st.session_state.database_subset = database_subset
+
+            # Try to reate a subset of the database where the user can interact and retrieve the user's name
+            database_subset, user = get_private_database(user_question)
+
+            # If the Code corresponds to and order, the database_subset will not be empty, so a user has been found
             if database_subset.shape[0] > 0:
-                st.session_state.messages.append({"role": "assistant", "content": "Molto bene."})
+                # Save the user and the database subset in the session state
                 st.session_state.to_login = False
+                st.session_state.user = user
+                st.session_state.database_subset = database_subset
+                st.session_state.messages.append({"role": "assistant", "content": "Benvenuti, " + user + "! Chiedi pure qualcosa sui tuoi ordini."})
             else:
+                # If the Code does not correspond to an order, the database_subset will be empty, so the user has not been found
                 st.session_state.messages.append({"role": "assistant", "content": "Il codice inserito non è corretto oppure non è nel sistema."})
         else:
             # Generate the full prompt for the AI
-            full_prompt = base_prompt.format(user_question=user_question)
+            full_prompt = base_prompt.format(user_question=user_question, authenticated_user=st.session_state.user)
             
             # Get the AI's response
             llm_response = chat_with_groq(client,full_prompt,model)
