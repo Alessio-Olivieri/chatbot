@@ -209,16 +209,16 @@ def main():
     # Set up the Streamlit interface
     spacer, col = st.columns([5, 1])  
 
-    st.title("DuckDB Query Generator")
+    st.title("Chatbot ordini")
 
     # Set up the customization options
-    st.sidebar.title('Customization')
-    additional_context = st.sidebar.text_input('Enter additional summarization context for the LLM here (i.e. write it in spanish):')
+    st.sidebar.title('Personalizzazione')
+    additional_context = st.sidebar.text_input('Scrivi eventuale contesto per il chatbot (Es: scrivi in italiano):')
     model = st.sidebar.selectbox(
         'Choose a model',
         ['llama3-8b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it', 'llama3-70b-8192']
     )
-    max_num_reflections = st.sidebar.slider('Max reflections:', 0, 10, value=5)
+    max_num_reflections = st.sidebar.slider('Massimo numero di possibili richieste:', 0, 10, value=5)
 
     # Initialize chat history
     if "messages" not in st.session_state:
@@ -226,8 +226,6 @@ def main():
         
         # Add the initial conversation message to the chat history
         st.session_state.messages.append({"role": "assistant", "content": "Ciao! Benvenuto nel servizio di informazioni sull'arrivo della merce.\
-                Per favore, chiedi qualcosa di specifico sui dati disponibili. Ad esempio,\
-                puoi chiedere: 'Quanti ordini sono stati effettuati da ciascun cliente?' oppure 'Qual è il totale delle vendite per ciascun prodotto?'\
                 Potresti dirmi il tuo codice ordine che inizia con '1R2'?"})
     
     # Display THe initial input
@@ -262,6 +260,7 @@ def main():
                 # Save the user and the database subset in the session state
                 st.session_state.to_login = False
                 st.session_state.user = user
+                st.session_state.order_code = user_question
                 st.session_state.database_subset = database_subset
                 st.session_state.messages.append({"role": "assistant", "content": "Benvenuti, " + user + "! Chiedi pure qualcosa sui tuoi ordini."})
             else:
@@ -269,7 +268,7 @@ def main():
                 st.session_state.messages.append({"role": "assistant", "content": "Il codice inserito non è corretto oppure non è nel sistema."})
         else:
             # Generate the full prompt for the AI
-            full_prompt = base_prompt.format(user_question=user_question, authenticated_user=st.session_state.user)
+            full_prompt = base_prompt.format(user_question=user_question, authenticated_user=st.session_state.user, order_code=st.session_state.order_code)
             
             # Get the AI's response
             llm_response = chat_with_groq(client,full_prompt,model)
