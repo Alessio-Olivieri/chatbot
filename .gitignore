@@ -1,1 +1,2 @@
 python-to-sql-venv
+.streamlit/secrets.toml
