@@ -36,7 +36,7 @@ def chat_with_groq(client,prompt,model):
     return completion.choices[0].message.content
 
 
-def execute_duckdb_query(query):
+def execute_duckdb_query(query, database_subset):
     """
     This function executes a SQL query on a DuckDB database and returns the result.
 
@@ -48,10 +48,9 @@ def execute_duckdb_query(query):
     """
     original_cwd = os.getcwd()
     os.chdir('data')
-    
     try:
         conn = duckdb.connect(database=':memory:', read_only=False)
-        query_result = conn.execute(query).fetchdf().reset_index(drop=True)
+        query_result = conn.execute(query.replace("data.csv", "database_subset")).fetchdf().reset_index(drop=True)
     finally:
         os.chdir(original_cwd)
 
@@ -168,6 +167,29 @@ def get_summarization(client,user_question,df,model,additional_context):
     return chat_with_groq(client,prompt,model)
 
 
+def get_private_database(code):
+    """
+    This function executes a SQL query returning only the entries of the database corresponding to the given code.
+
+    Parameters:
+    code (str): The code of the person
+
+    Returns:
+    DataFrame: The result of the query as a pandas DataFrame.
+    """
+
+    original_cwd = os.getcwd()
+    os.chdir('data')
+
+    conn = duckdb.connect(database=':memory:', read_only=False)
+    database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Codice = '{code}'").fetchdf().reset_index(drop=True)
+
+    os.chdir(original_cwd)
+
+    return database_subset
+
+
+
 def main():
     """
     The main function of the application. It handles user input, controls the flow of the application, 
@@ -184,10 +206,6 @@ def main():
     spacer, col = st.columns([5, 1])  
 
     st.title("DuckDB Query Generator")
-    st.write("Ciao! Benvenuto nel servizio di informazioni sull'arrivo della merce.\
-             Per favore, chiedi qualcosa di specifico sui dati disponibili. Ad esempio,\
-              puoi chiedere: 'Quanti ordini sono stati effettuati da ciascun cliente?' oppure 'Qual è il totale delle vendite per ciascun prodotto?'\
-             Potresti dirmi il tuo codice ordine che inizia con '1R2'?")
 
     # Set up the customization options
     st.sidebar.title('Customization')
@@ -198,57 +216,96 @@ def main():
     )
     max_num_reflections = st.sidebar.slider('Max reflections:', 0, 10, value=5)
 
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+        
+        # Add the initial conversation message to the chat history
+        st.session_state.messages.append({"role": "assistant", "content": "Ciao! Benvenuto nel servizio di informazioni sull'arrivo della merce.\
+                Per favore, chiedi qualcosa di specifico sui dati disponibili. Ad esempio,\
+                puoi chiedere: 'Quanti ordini sono stati effettuati da ciascun cliente?' oppure 'Qual è il totale delle vendite per ciascun prodotto?'\
+                Potresti dirmi il tuo codice ordine che inizia con '1R2'?"})
+    
+    # Display THe initial input
+    with st.chat_message(st.session_state.messages[0]["role"]):
+        st.markdown(st.session_state.messages[0]["content"])
+
     # Load the base prompt
     with open('prompts/base_prompt.txt', 'r') as file:
         base_prompt = file.read()
 
     # Get the user's question
-    user_question = st.text_input("Ask a question:")
+    user_question = st.chat_input("Ask a question")
+    
+    if 'to_login' not in st.session_state:
+        st.session_state.to_login = True
 
     # If the user has asked a question, process it
     if user_question:
-        # Generate the full prompt for the AI
-        full_prompt = base_prompt.format(user_question=user_question)
+        # Add user question to chat history
+        st.session_state.messages.append({"role": "user", "content": user_question})
         
-        # Get the AI's response
-        llm_response = chat_with_groq(client,full_prompt,model)
-
-        # Try to process the AI's response
-        valid_response = False
-        i=0
-        while valid_response is False and i < max_num_reflections:
-            try:
-                # Check if the AI's response contains a SQL query or an error message
-                is_sql,result = get_json_output(llm_response)
-                if is_sql:
-                    # If the response contains a SQL query, execute it
-                    results_df = execute_duckdb_query(result)
-                    valid_response = True
-                else:
-                    # If the response contains an error message, it's considered valid
-                    valid_response = True
-            except:
-                # If there was an error processing the AI's response, get a reflection
-                llm_response = get_reflection(client,full_prompt,llm_response,model)
-                i+=1
-
-        # Display the result
-        try:
-            if is_sql:
-                # If the result is a SQL query, display the query and the resulting data
-                st.markdown("```sql\n" + result + "\n```")
-                st.markdown(results_df.to_html(index=False), unsafe_allow_html=True)
-
-                # Get a summarization of the data and display it
-                summarization = get_summarization(client,user_question,results_df,model,additional_context)
-                st.write(summarization.replace('$','\\$'))
+        # If the user is giving in input the code
+        if st.session_state.to_login:
+            #Create a subset of the database where the user can interact
+            database_subset = get_private_database(user_question)
+            st.session_state.database_subset = database_subset
+            if database_subset.shape[0] > 0:
+                st.session_state.messages.append({"role": "assistant", "content": "Molto bene."})
+                st.session_state.to_login = False
             else:
-                # If the result is an error message, display it
-                st.write(result)
-        except:
-            # If there was an error displaying the result, display an error message
-            st.write("ERROR:", 'Could not generate valid SQL for this question')
-            st.write(llm_response)
+                st.session_state.messages.append({"role": "assistant", "content": "Il codice inserito non è corretto oppure non è nel sistema."})
+        else:
+            # Generate the full prompt for the AI
+            full_prompt = base_prompt.format(user_question=user_question)
+            
+            # Get the AI's response
+            llm_response = chat_with_groq(client,full_prompt,model)
+
+            # Try to process the AI's response
+            valid_response = False
+            i=0
+            while valid_response is False and i < max_num_reflections:
+                try:
+                    # Check if the AI's response contains a SQL query or an error message
+                    is_sql,result = get_json_output(llm_response)
+                    if is_sql:
+                        # If the response contains a SQL query, execute it
+                        results_df = execute_duckdb_query(result, st.session_state.database_subset)
+                        valid_response = True
+                    else:
+                        # If the response contains an error message, it's considered valid
+                        valid_response = True
+                except:
+                    # If there was an error processing the AI's response, get a reflection
+                    llm_response = get_reflection(client,full_prompt,llm_response,model)
+                    i+=1
+
+            # Display the result
+            try:
+                if is_sql:
+                    # Get a summarization of the data and display it
+                    summarization = get_summarization(client, user_question, results_df, model, additional_context)
+
+                    # Create an HTML string to display the SQL query and resulting data
+                    query_and_data = f"<p><b>SQL Query:</b><pre>{result}</pre></p><p><b>Resulting Data:</b><br>{results_df.to_html(index=False)}</p>"
+
+                    # Append the summarization and query/data to the assistant's message
+                    assistant_message = f"{summarization}<br>{query_and_data}"
+                    st.session_state.messages.append({"role": "assistant", "content": assistant_message.replace('$','\\$')})
+                else:
+                    # If the result is an error message, display it
+                    st.session_state.messages.append({"role": "assistant", "content": result})
+            except:
+                # If there was an error displaying the result, display an error message
+                st.write()
+                st.session_state.messages.append({"role": "assistant", "content": ("ERROR:", 'Could not generate valid SQL for this question' + llm_response)})
+
+        # Display chat messages from history on app rerun
+        for message in st.session_state.messages[1:]:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"], unsafe_allow_html=True)
+
             
 
 if __name__ == "__main__":
