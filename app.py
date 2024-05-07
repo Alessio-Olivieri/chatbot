@@ -192,12 +192,12 @@ def get_private_database(code):
     user = (conn.execute(f"SELECT DISTINCT Nome_e_Cognome FROM data.csv WHERE Codice = ?", [code]).fetchdf().reset_index(drop=True))
     try:
         user = user.iat[0,0]
-        database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Nome_e_Cognome = ?", [user]).fetchdf().reset_index(drop=True)
     except:
-        database_subset = conn.execute("SELECT null").fetchdf().reset_index(drop=True)
+        user = ""
+    database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Nome_e_Cognome = ?", [user]).fetchdf().reset_index(drop=True)
     os.chdir(original_cwd)
 
-    return database_subset, user
+    return database_subset, user, code
 
 
 
@@ -261,14 +261,14 @@ def main():
             if st.session_state.to_login:
 
                 # Try to reate a subset of the database where the user can interact and retrieve the user's name
-                database_subset, user = get_private_database(user_question)
+                database_subset, user, order_code = get_private_database(user_question)
 
                 # If the Code corresponds to and order, the database_subset will not be empty, so a user has been found
                 if database_subset.shape[0] > 0:
                     # Save the user and the database subset in the session state
                     st.session_state.to_login = False
                     st.session_state.user = user
-                    st.session_state.order_code = user_question
+                    st.session_state.order_code = order_code
                     st.session_state.database_subset = database_subset
                     st.session_state.messages.append({"role": "assistant", "content": "Benvenuti, " + user + "! Chiedi pure qualcosa sui tuoi ordini."})
                 else:
