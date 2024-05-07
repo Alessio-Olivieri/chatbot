@@ -49,7 +49,7 @@ def execute_duckdb_query(query, database_subset):
     original_cwd = os.getcwd()
     os.chdir('data')
     try:
-        conn = duckdb.connect(database=':memory:', read_only=True)
+        conn = duckdb.connect(database=':memory:', read_only=False)
         query_result = conn.execute(query.replace("data.csv", "database_subset")).fetchdf().reset_index(drop=True)
     finally:
         os.chdir(original_cwd)
@@ -188,7 +188,7 @@ def get_private_database(code):
     else:
         code = code[index:index+9]
     
-    conn = duckdb.connect(database=':memory:', read_only=True)
+    conn = duckdb.connect(database=':memory:', read_only=False)
     user = (conn.execute(f"SELECT DISTINCT Nome_e_Cognome FROM data.csv WHERE Codice = ?", [code]).fetchdf().reset_index(drop=True))
     try:
         user = user.iat[0,0]
