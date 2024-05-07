@@ -181,9 +181,16 @@ def get_private_database(code):
     original_cwd = os.getcwd()
     os.chdir('data')
 
+    # find 1R2 code in the database
+    index = code.find('1R2')
+    if index == -1:
+        code = None
+    else:
+        code = code[index:index+9]
+    
     conn = duckdb.connect(database=':memory:', read_only=False)
-    database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Codice = '{code}'").fetchdf().reset_index(drop=True)
-    user = (conn.execute(f"SELECT DISTINCT Nome_e_Cognome FROM data.csv WHERE Codice = '{code}'").fetchdf().reset_index(drop=True))
+    database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Codice = ?", [code]).fetchdf().reset_index(drop=True)
+    user = (conn.execute(f"SELECT DISTINCT Nome_e_Cognome FROM data.csv WHERE Codice = ?", [code]).fetchdf().reset_index(drop=True))
     try:
         user = user.iat[0,0]
     except:
@@ -199,123 +206,134 @@ def main():
     The main function of the application. It handles user input, controls the flow of the application, 
     and displays the results on the Streamlit interface.
     """
-    
-    # Get the Groq API key and create a Groq client
-    groq_api_key = st.secrets["GROQ_API_KEY"]
-    client = Groq(
-        api_key=groq_api_key,
-    )
-
-    # Set up the Streamlit interface
-    spacer, col = st.columns([5, 1])  
-
-    st.title("Chatbot ordini")
-
-    # Set up the customization options
-    st.sidebar.title('Personalizzazione')
-    additional_context = st.sidebar.text_input('Scrivi eventuale contesto per il chatbot (Es: scrivi in italiano):')
-    model = st.sidebar.selectbox(
-        'Choose a model',
-        ['llama3-8b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it', 'llama3-70b-8192']
-    )
-    max_num_reflections = st.sidebar.slider('Massimo numero di possibili richieste:', 0, 10, value=5)
-
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    try:
         
-        # Add the initial conversation message to the chat history
-        st.session_state.messages.append({"role": "assistant", "content": "Ciao! Benvenuto nel servizio di informazioni sull'arrivo della merce.\
-                Potresti dirmi il tuo codice ordine che inizia con '1R2'?"})
-    
-    # Display THe initial input
-    with st.chat_message(st.session_state.messages[0]["role"]):
-        st.markdown(st.session_state.messages[0]["content"])
+        # Get the Groq API key and create a Groq client
+        groq_api_key = st.secrets["GROQ_API_KEY"]
+        client = Groq(
+            api_key=groq_api_key,
+        )
 
-    # Load the base prompt
-    with open('prompts/base_prompt.txt', 'r') as file:
-        base_prompt = file.read()
+        # Set up the Streamlit interface
+        spacer, col = st.columns([5, 1])  
 
-    # Get the user's question
-    user_question = st.chat_input("Ask a question")
-    
-    # Initialize the 'to_login' session state variable to False
-    if 'to_login' not in st.session_state:
-        st.session_state.to_login = True
+        st.title("Chatbot ordini")
 
-    # If the user has asked a question, process it
-    if user_question:
+        # Set up the customization options
+        st.sidebar.title('Personalizzazione')
+        additional_context = st.sidebar.text_input('Scrivi eventuale contesto per il chatbot (Es: scrivi in italiano):')
+        model = st.sidebar.selectbox(
+            'Choose a model',
+            ['llama3-8b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it', 'llama3-70b-8192']
+        )
+        max_num_reflections = st.sidebar.slider('Massimo numero di possibili richieste:', 0, 10, value=5)
 
-        # Add user question to chat history
-        st.session_state.messages.append({"role": "user", "content": user_question})
-        
-        # If the user has to log in
-        if st.session_state.to_login:
-
-            # Try to reate a subset of the database where the user can interact and retrieve the user's name
-            database_subset, user = get_private_database(user_question)
-
-            # If the Code corresponds to and order, the database_subset will not be empty, so a user has been found
-            if database_subset.shape[0] > 0:
-                # Save the user and the database subset in the session state
-                st.session_state.to_login = False
-                st.session_state.user = user
-                st.session_state.order_code = user_question
-                st.session_state.database_subset = database_subset
-                st.session_state.messages.append({"role": "assistant", "content": "Benvenuti, " + user + "! Chiedi pure qualcosa sui tuoi ordini."})
-            else:
-                # If the Code does not correspond to an order, the database_subset will be empty, so the user has not been found
-                st.session_state.messages.append({"role": "assistant", "content": "Il codice inserito non è corretto oppure non è nel sistema."})
-        else:
-            # Generate the full prompt for the AI
-            full_prompt = base_prompt.format(user_question=user_question, authenticated_user=st.session_state.user, order_code=st.session_state.order_code)
+        # Initialize chat history
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
             
-            # Get the AI's response
-            llm_response = chat_with_groq(client,full_prompt,model)
+            # Add the initial conversation message to the chat history
+            st.session_state.messages.append({"role": "assistant", "content": "Ciao! Benvenuto nel servizio di informazioni sull'arrivo della merce.\
+                    Potresti dirmi il tuo codice ordine che inizia con '1R2'?"})
+        
+        # Display THe initial input
+        with st.chat_message(st.session_state.messages[0]["role"]):
+            st.markdown(st.session_state.messages[0]["content"])
 
-            # Try to process the AI's response
-            valid_response = False
-            i=0
-            while valid_response is False and i < max_num_reflections:
-                try:
-                    # Check if the AI's response contains a SQL query or an error message
-                    is_sql,result = get_json_output(llm_response)
-                    if is_sql:
-                        # If the response contains a SQL query, execute it
-                        results_df = execute_duckdb_query(result, st.session_state.database_subset)
-                        valid_response = True
-                    else:
-                        # If the response contains an error message, it's considered valid
-                        valid_response = True
-                except:
-                    # If there was an error processing the AI's response, get a reflection
-                    llm_response = get_reflection(client,full_prompt,llm_response,model)
-                    i+=1
+        # Load the base prompt
+        with open('prompts/base_prompt.txt', 'r') as file:
+            base_prompt = file.read()
 
-            # Display the result
-            try:
-                if is_sql:
-                    # Get a summarization of the data and display it
-                    summarization = get_summarization(client, user_question, results_df, model, additional_context)
+        # Get the user's question
+        user_question = st.chat_input("Ask a question")
+        
+        # Initialize the 'to_login' session state variable to False
+        if 'to_login' not in st.session_state:
+            st.session_state.to_login = True
 
-                    # Create an HTML string to display the SQL query and resulting data
-                    query_and_data = f"<p><b>SQL Query:</b><pre>{result}</pre></p><p><b>Resulting Data:</b><br>{results_df.to_html(index=False)}</p>"
+        # If the user has asked a question, process it
+        if user_question:
 
-                    # Append the summarization and query/data to the assistant's message
-                    assistant_message = f"{summarization}<br>{query_and_data}"
-                    st.session_state.messages.append({"role": "assistant", "content": assistant_message.replace('$','\\$')})
+            # Add user question to chat history
+            st.session_state.messages.append({"role": "user", "content": user_question})
+            
+            # If the user has to log in
+            if st.session_state.to_login:
+
+                # Try to reate a subset of the database where the user can interact and retrieve the user's name
+                database_subset, user = get_private_database(user_question)
+
+                # If the Code corresponds to and order, the database_subset will not be empty, so a user has been found
+                if database_subset.shape[0] > 0:
+                    # Save the user and the database subset in the session state
+                    st.session_state.to_login = False
+                    st.session_state.user = user
+                    st.session_state.order_code = user_question
+                    st.session_state.database_subset = database_subset
+                    st.session_state.messages.append({"role": "assistant", "content": "Benvenuti, " + user + "! Chiedi pure qualcosa sui tuoi ordini."})
                 else:
-                    # If the result is an error message, display it
-                    st.session_state.messages.append({"role": "assistant", "content": result})
-            except:
-                # If there was an error displaying the result, display an error message
-                st.write()
-                st.session_state.messages.append({"role": "assistant", "content": ("ERROR:", 'Could not generate valid SQL for this question' + llm_response)})
+                    # If the Code does not correspond to an order, the database_subset will be empty, so the user has not been found
+                    st.session_state.messages.append({"role": "assistant", "content": "Il codice inserito non è corretto oppure non è nel sistema."})
+            else:
+                # Generate the full prompt for the AI
+                full_prompt = base_prompt.format(user_question=user_question, authenticated_user=st.session_state.user, order_code=st.session_state.order_code)
+                
+                # Get the AI's response
+                llm_response = chat_with_groq(client,full_prompt,model)
 
-        # Display chat messages from history on app rerun
-        for message in st.session_state.messages[1:]:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"], unsafe_allow_html=True)
+                # Try to process the AI's response
+                valid_response = False
+                i=0
+                while valid_response is False and i < max_num_reflections:
+                    try:
+                        # Check if the AI's response contains a SQL query or an error message
+                        is_sql,result = get_json_output(llm_response)
+                        if is_sql:
+                            # If the response contains a SQL query, execute it
+                            results_df = execute_duckdb_query(result, st.session_state.database_subset)
+                            valid_response = True
+                        else:
+                            # If the response contains an error message, it's considered valid
+                            valid_response = True
+                    except:
+                        # If there was an error processing the AI's response, get a reflection
+                        llm_response = get_reflection(client,full_prompt,llm_response,model)
+                        i+=1
+
+                # Display the result
+                try:
+                    if is_sql:
+                        # Get a summarization of the data and display it
+                        summarization = get_summarization(client, user_question, results_df, model, additional_context)
+
+                        # Create an HTML string to display the SQL query and resulting data
+                        query_and_data = f"<p><b>SQL Query:</b><pre>{result}</pre></p><p><b>Resulting Data:</b><br>{results_df.to_html(index=False)}</p>"
+
+                        # Append the summarization and query/data to the assistant's message
+                        assistant_message = f"{summarization}<br>{query_and_data}"
+                        st.session_state.messages.append({"role": "assistant", "content": assistant_message.replace('$','\\$')})
+                    else:
+                        # If the result is an error message, display it
+                        st.session_state.messages.append({"role": "assistant", "content": result})
+                except:
+                    # If there was an error displaying the result, display an error message
+                    st.write()
+                    st.session_state.messages.append({"role": "assistant", "content": ("ERROR:", 'Could not generate valid SQL for this question' + llm_response)})
+
+            # Display chat messages from history on app rerun
+            for message in st.session_state.messages[1:]:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"], unsafe_allow_html=True)
+    except Exception as e:
+        if e.args[0] == 401:
+            st.error("Errore di autenticazione. Controlla la tua chiave API Groq.")
+        elif e.args[0] == 429:
+            st.error("Errore di rate limit. Riprova più tardi.")
+        elif e.args[0] == 500:
+            st.error("Errore interno del server. Riprova più tardi.")
+        elif e.args[0] == 503:
+            st.error("Il servizio è temporaneamente non disponibile. Riprova più tardi.")
+
 
             
 
