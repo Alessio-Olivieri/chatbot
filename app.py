@@ -333,6 +333,8 @@ def main():
             st.error("Errore interno del server. Riprova più tardi.")
         elif e.args[0] == 503:
             st.error("Il servizio è temporaneamente non disponibile. Riprova più tardi.")
+        else:
+            st.error("Errore sconosciuto: " + str(e))
 
 
             
