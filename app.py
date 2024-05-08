@@ -129,7 +129,7 @@ def get_reflection(client,full_prompt,llm_response,model):
     return chat_with_groq(client,reflection_prompt,model)
 
 
-def get_summarization(client,user_question,df,model,additional_context):
+def get_summarization(client,user_question,df,model,additional_context,user):
     """
     This function generates a summarization prompt based on the user's question and the resulting data. 
     It then sends this summarization prompt to the Groq API and retrieves the AI's response.
@@ -146,7 +146,7 @@ def get_summarization(client,user_question,df,model,additional_context):
     """
 
     prompt = '''
-    A user asked the following question pertaining to local database tables:
+    {user} asked the following question pertaining to local database tables:
     
     {user_question}
     
@@ -155,7 +155,16 @@ def get_summarization(client,user_question,df,model,additional_context):
     Dataframe:
     {df}
 
-    In a few sentences, summarize the data in the table as it pertains to the original user question. Avoid qualifiers like "based on the data" and do not comment on the structure or metadata of the table itself
+    In a few sentences, summarize the data in the table as it pertains to the original user question.
+    When writing use guidelines from the following books:
+    * "Influence: The Psychology of Persuasion" di Robert Cialdini
+    * "The Customer Comes Second" di Hal Rosenbluth e Diane Peters
+    * "Emotional Intelligence" di Daniel Goleman
+    * "The Call Center Handbook" di Keith Dawson
+    * "Customer Service: The Art of Listening" di Nancy Friedman
+    * "The Psychology of Human Communication" di Joseph DeVito
+    * "Social Influence and Social Change" di Robert B. Cialdini
+    * "Theories of Human Communication" di Stephen W. Littlejohn e Karen A. Foss
     '''.format(user_question = user_question, df = df)
 
     if additional_context != '':
@@ -304,14 +313,14 @@ def main():
                 try:
                     if is_sql:
                         # Get a summarization of the data and display it
-                        summarization = get_summarization(client, user_question, results_df, model, additional_context)
+                        summarization = get_summarization(client, user_question, results_df, model, additional_context, st.session_state.user)
 
                         # Create an HTML string to display the SQL query and resulting data
-                        query_and_data = f"<p><b>SQL Query:</b><pre>{result}</pre></p><p><b>Resulting Data:</b><br>{results_df.to_html(index=False)}</p>"
+                        #query_and_data = f"<p><b>SQL Query:</b><pre>{result}</pre></p><p><b>Resulting Data:</b><br>{results_df.to_html(index=False)}</p>"
 
                         # Append the summarization and query/data to the assistant's message
-                        assistant_message = f"{summarization}<br>{query_and_data}"
-                        st.session_state.messages.append({"role": "assistant", "content": assistant_message.replace('$','\\$')})
+                        #assistant_message = f"{summarization}<br>{query_and_data}"
+                        st.session_state.messages.append({"role": "assistant", "content": summarization.replace('$','\\$')})
                     else:
                         # If the result is an error message, display it
                         st.session_state.messages.append({"role": "assistant", "content": result})
