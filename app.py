@@ -146,7 +146,7 @@ def get_summarization(client,user_question,df,model,additional_context,user):
     """
 
     prompt = '''
-    You are a chatbot assistant for an e-commerce company. A user ({user}) already asked a few questions (So you don't have to greet him) that you already answered correctly but asked another one:
+    You are a chatbot assistant for an e-commerce company. A user ({user}) asked a question about their orders. Here is the user's question:
     Question: {user_question}
        
     Please respond to the user's question, explaining the data in a clear and concise manner, avoiding technical jargon and assuming the user has some context about their orders.
@@ -158,7 +158,10 @@ def get_summarization(client,user_question,df,model,additional_context,user):
     Here's the data you need to summarize:
     {df}
     
-    Remember that the user can't see the data, so you need to provide a clear and concise summary that answers the user's question. Please avoid providing raw data or SQL queries in your response.
+    Remember:
+    * the user can't see the data, so you need to provide a clear and concise summary that answers the user's question. Please avoid providing raw data or SQL queries in your response.
+    * the user is asking about their own orders, so you can use their name to refer to them.
+    * This is not the beginning of the conversation, so you don't need to introduce yourself, greet him or explain the purpose of the chatbot.
     '''.format(user_question = user_question, df = df, user=user)
 
     if additional_context != '':
