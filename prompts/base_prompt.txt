@@ -5,7 +5,7 @@ Columns:
 Codice (STRING): Unique identifier of each order.
 Nome_e_Cognome (STRING): Name and surname of the customer that made the order.
 Oggetto (STRING): The specific object the customer ordered.
-Stato (STRING): SI or NO
+Spedito (STRING): If "SI" the order has been shipped, if "In attesa" it is ready do be shipped, if "NO" it is still not ready for shipment.
 
 Given a user's question about this data, write a valid DuckDB SQL query that accurately extracts or calculates the requested information from these tables and adheres to SQL best practices for DuckDB, optimizing for readability and performance where applicable.
 

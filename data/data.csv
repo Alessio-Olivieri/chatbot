@@ -1,15 +1,22 @@
-id,codice, Nome_e_Cognome, Oggetto, Stato
+id,codice, Nome_e_Cognome, Oggetto, Spedito
 1,1R2432105,Marco Rossi,Soggiorno,SI
 2,1R2985672,Anna Bianchi,Cucina,NO
 3,1R2176985,Giulia Esposito,Divano,SI
-4,1R2985672,Anna Bianchi,Letto,SI
-5,1R2432105,Marco Rossi,Letto,SI
-6,1R2176985,Giulia Esposito,Letto,NO
-7,1R2432105,Marco Rossi,Letto,SI
-8,1R2176985,Giulia Esposito,Letto,SI
-9,1R2985672,Anna Bianchi,Letto,SI
-10,1R2176985,Giulia Esposito,Letto,SI
-11,1R2432105,Marco Rossi,Letto,SI
-12,1R2985672,Anna Bianchi,Letto,SI
-13,1R2176985,Giulia Esposito,Letto,SI
-
+4,1R2985072,Anna Bianchi,Letto,SI
+5,1R2432605,Marco Rossi,Letto,SI
+6,1R2176785,Giulia Esposito,Letto,NO
+7,1R2432305,Marco Rossi,Letto,SI
+8,1R2176685,Giulia Esposito,Letto,SI
+9,1R2985172,Anna Bianchi,Letto,SI
+10,1R2177985, Giulia Esposito,Letto,SI
+11,1R2436105, Marco Rossi,Letto,SI
+12,1R2983672, Anna Bianchi,Letto,SI
+13,1R2171985, Giulia Esposito,Letto,SI
+15,1R2437105, Marco Rossi, Soggiorno,	SI
+16, 1R2965672,	Anna Bianchi,	Cucina,	NO
+17, 1R2176995,	Giulia Esposito,	Divano,	SI
+18, 1R2894231,	Paolo Verdi,	Tavolo da pranzo,	In attesa
+19, 1R2210987,	Sofia Mancini,	Camera da letto,	SI
+20, 1R2439871,	Roberto Azzurri,	Elettrodomestici,	NO 
+21, 1R2987654,	Elena Gialli,	Giardino,	SI
+22, 1R2234567,	David Neri,	Ufficio,	In attesa

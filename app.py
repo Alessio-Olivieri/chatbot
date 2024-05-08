@@ -7,6 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import duckdb
 import sqlparse
+import gender_guesser.detector as gender
 
 
 
@@ -229,7 +230,6 @@ def main():
         # Initialize chat history
         if "messages" not in st.session_state:
             st.session_state.messages = []
-            
             # Add the initial conversation message to the chat history
             st.session_state.messages.append({"role": "assistant", "content": "Ciao! Benvenuto nel servizio di informazioni sull'arrivo della merce.\
                     Potresti dirmi il tuo codice ordine che inizia con '1R2'?"})
@@ -266,9 +266,15 @@ def main():
                     # Save the user and the database subset in the session state
                     st.session_state.to_login = False
                     st.session_state.user = user
+                    d = gender.Detector()
+                    sex = d.get_gender(user.split()[0])
+                    if "female" in sex:
+                        suffix = "a"
+                    else:
+                        suffix = "o"
                     st.session_state.order_code = order_code
                     st.session_state.database_subset = database_subset
-                    st.session_state.messages.append({"role": "assistant", "content": "Benvenuti, " + user + "! Chiedi pure qualcosa sui tuoi ordini."})
+                    st.session_state.messages.append({"role": "assistant", "content": f"Benvenut{suffix} {user}! Chiedi pure qualcosa sui tuoi ordini."})
                 else:
                     # If the Code does not correspond to an order, the database_subset will be empty, so the user has not been found
                     st.session_state.messages.append({"role": "assistant", "content": "Il codice inserito non è corretto oppure non è nel sistema."})
