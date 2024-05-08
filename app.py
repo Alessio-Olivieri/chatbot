@@ -146,30 +146,24 @@ def get_summarization(client,user_question,df,model,additional_context,user):
     """
 
     prompt = '''
-    {user} asked the following question pertaining to local database tables:
-    
-    {user_question}
-    
-    To answer the question, a dataframe was returned:
+    You are a chatbot assistant for an e-commerce company. A user ({user}) already asked a few questions (So you don't have to greet him) that you already answered correctly but asked another one:
+    Question: {user_question}
+       
+    Please respond to the user's question, explaining the data in a clear and concise manner, avoiding technical jargon and assuming the user has some context about their orders.
 
-    Dataframe:
+    The response should be friendly, empathetic, and brief, following the guidelines from the books "Influence: The Psychology of Persuasion" by Robert Cialdini, "The Call Center Handbook" by Keith Dawson, "Customer Service: The Art of Listening" by Nancy Friedman, and "The Psychology of Human Communication" by Joseph DeVito.
+
+    Write in Italian.
+
+    Here's the data you need to summarize:
     {df}
-
-    In a few sentences, summarize the data in the table as it pertains to the original user question.
-    When writing use guidelines from the following books:
-    * "Influence: The Psychology of Persuasion" di Robert Cialdini
-    * "The Customer Comes Second" di Hal Rosenbluth e Diane Peters
-    * "Emotional Intelligence" di Daniel Goleman
-    * "The Call Center Handbook" di Keith Dawson
-    * "Customer Service: The Art of Listening" di Nancy Friedman
-    * "The Psychology of Human Communication" di Joseph DeVito
-    * "Social Influence and Social Change" di Robert B. Cialdini
-    * "Theories of Human Communication" di Stephen W. Littlejohn e Karen A. Foss
-    '''.format(user_question = user_question, df = df)
+    
+    Remember that the user can't see the data, so you need to provide a clear and concise summary that answers the user's question. Please avoid providing raw data or SQL queries in your response.
+    '''.format(user_question = user_question, df = df, user=user)
 
     if additional_context != '':
         prompt += '''\n
-        The user has provided this additional context:
+        Moreover, the user has provided this additional context, respect it in your response:
         {additional_context}
         '''.format(additional_context=additional_context)
 
@@ -177,6 +171,7 @@ def get_summarization(client,user_question,df,model,additional_context,user):
 
 
 def get_private_database(code):
+
     """
     This function executes a SQL query returning only the entries of the database corresponding to the given code.
 
@@ -327,7 +322,7 @@ def main():
                 except:
                     # If there was an error displaying the result, display an error message
                     st.write()
-                    st.session_state.messages.append({"role": "assistant", "content": ("ERROR:", 'Could not generate valid SQL for this question' + llm_response)})
+                    st.session_state.messages.append({"role": "assistant", "content": ("ERROR:", 'Could not generate valid SQL for this question ' + llm_response)})
 
             # Display chat messages from history on app rerun
             for message in st.session_state.messages[1:]:
