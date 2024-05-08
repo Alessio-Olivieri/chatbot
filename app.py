@@ -54,6 +54,10 @@ def execute_duckdb_query(query, database_subset):
         query_result = conn.execute(query.replace("data.csv", "database_subset")).fetchdf().reset_index(drop=True)
     finally:
         os.chdir(original_cwd)
+    
+    # remove the id column
+    if 'id' in query_result.columns:
+        query_result = query_result.drop(columns=['id'])
 
 
     return query_result

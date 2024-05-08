@@ -11,3 +11,5 @@ os.chdir('data')
 conn = duckdb.connect(database=':memory:', read_only=False)
 query_result = conn.execute("SELECT * FROM data.csv AS orders WHERE Spedito = 'SI'").fetchdf().reset_index(drop=True)
 print(query_result)
+
+print(query_result[id])
