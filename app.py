@@ -146,28 +146,19 @@ def get_summarization(client,user_question,df,model,additional_context,user):
     """
 
     prompt = '''
-    You are a chatbot assistant for an e-commerce company. A user ({user}) asked a question about their orders. Here is the user's question:
-    Question: {user_question}
-       
-    Please respond to the user's question, explaining the data in a clear and concise manner, avoiding technical jargon and assuming the user has some context about their orders.
+        You are a chatbot assistant for an e-commerce company. Respond directly to the user's question about their orders in Italian, providing a clear and concise summary of the relevant data. Be friendly and empathetic in your response, but do not start with a greeting or address the user by name. Simply provide the answer to the user's question in a helpful and courteous tone, without any introductory phrases.
 
-    The response should be friendly, empathetic, and brief, following the guidelines from the books "Influence: The Psychology of Persuasion" by Robert Cialdini, "The Call Center Handbook" by Keith Dawson, "Customer Service: The Art of Listening" by Nancy Friedman, and "The Psychology of Human Communication" by Joseph DeVito.
+User: {user}
 
-    Write in Italian.
+User's question: {user_question}
 
-    Here's the data you need to summarize:
-    {df}
-    
-    Remember:
-    * the user can't see the data, so you need to provide a clear and concise summary that answers the user's question. Please avoid providing raw data or SQL queries in your response.
-    * the user is asking about their own orders, so you can use their name to refer to them.
-    * This is not the beginning of the conversation, so you don't need to introduce yourself, greet him or explain the purpose of the chatbot.
+Data: {df}
+
     '''.format(user_question = user_question, df = df, user=user)
 
     if additional_context != '':
         prompt += '''\n
-        Moreover, the user has provided this additional context, respect it in your response:
-        {additional_context}
+        Additional context: {additional_context}
         '''.format(additional_context=additional_context)
 
     return chat_with_groq(client,prompt,model)
