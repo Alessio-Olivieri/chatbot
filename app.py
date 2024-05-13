@@ -198,6 +198,7 @@ def get_private_database(code):
     except:
         user = ""
     database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Nome_e_Cognome = ?", [user]).fetchdf().reset_index(drop=True)
+    database_subset = database_subset.drop(columns=['id'])
     os.chdir(original_cwd)
 
     return database_subset, user, code
