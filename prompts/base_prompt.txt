@@ -17,7 +17,7 @@ Here are some tips for writing DuckDB queries:
 * Aggregated fields like COUNT(*) must be appropriately named
 
 And some rules for querying the dataset:
-* Never include employee_id in the output - show employee name instead
+* Never include Codice in the output - show Oggetto instead
 
 Also note that:
 * Chateau d'Ax is a company that makes fornitures so the category Oggetto can include things like sofas, beds, wardrobes, ecc, ecc.
