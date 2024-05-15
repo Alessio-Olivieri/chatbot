@@ -149,7 +149,7 @@ def get_summarization(client,user_question,df,model,additional_context,user):
     Returns:
     str: The content of the AI's response to the summarization prompt.
     """
-
+    print("ciao")
     prompt = '''
         You are a chatbot assistant for an e-commerce company. Respond directly to the user's question about their orders in Italian, providing a clear and concise summary of the relevant data. Be friendly and empathetic in your response, but do not start with a greeting or address the user by name. Simply provide the answer to the user's question in a helpful and courteous tone, without any introductory phrases.
 
@@ -159,8 +159,14 @@ User's question: {user_question}
 
 Data: {df}
 
-    '''.format(user_question = user_question, df = df, user=user)
+Note: 
+* if the status is "In consegna" you should say: "La tua merce è in consegna e verrai contattato dall'ufficio logistico per fissare l'appuntamento di consegna entro 48 ore dalla contabilizzazione del bonifico."
+* if the status is "In attesa della merce" you should say "La tua merce non è ancora arrivata. Non appena la merce viene scaricata, verrai contattato dall'ufficio logistico per fissare l'appuntamento di consegna."
+* if the status is "In attesa di pagamento" you should say "Il tuo bonifico è stato ricevuto e verrà contabilizzato entro 2-3 giorni lavorativi. Una volta contabilizzato, verrai contattato dall'ufficio logistico per fissare l'appuntamento di consegna."
 
+
+    '''.format(user_question = user_question, df = df, user=user)
+    print("ciaone")
     if additional_context != '':
         prompt += '''\n
         Additional context: {additional_context}
@@ -197,11 +203,15 @@ def get_private_database(code):
         user = user.iat[0,0]
     except:
         user = ""
+    try:
+        status = (conn.execute(f"SELECT Stato FROM data.csv WHERE Codice = ?", [code]).fetchdf().reset_index(drop=True)).iat[0,0]
+    except:
+        status = ""
     database_subset = conn.execute(f"SELECT * FROM data.csv WHERE Nome_e_Cognome = ?", [user]).fetchdf().reset_index(drop=True)
     database_subset = database_subset.drop(columns=['id'])
     os.chdir(original_cwd)
 
-    return database_subset, user, code
+    return database_subset, user, code, status
 
 
 
@@ -264,7 +274,7 @@ def main():
             if st.session_state.to_login:
 
                 # Try to reate a subset of the database where the user can interact and retrieve the user's name
-                database_subset, user, order_code = get_private_database(user_question)
+                database_subset, user, order_code, status = get_private_database(user_question)
 
                 # If the Code corresponds to and order, the database_subset will not be empty, so a user has been found
                 if database_subset.shape[0] > 0:
@@ -279,7 +289,13 @@ def main():
                         suffix = "o"
                     st.session_state.order_code = order_code
                     st.session_state.database_subset = database_subset
-                    st.session_state.messages.append({"role": "assistant", "content": f"Benvenut{suffix} {user}! Chiedi pure qualcosa sui tuoi ordini."})
+                    switch = {
+                        "In consegna": "Grazie per averci contattati! La tua merce è in consegna e verrai contattat{suffix} dall'ufficio logistico per fissare l'appuntamento di consegna entro 48 ore dalla contabilizzazione del bonifico.",
+                        "In attesa della merce": "Grazie per averci contattati! La tua merce non è ancora arrivata. Non appena la merce viene scaricata, verrai contattat{suffix} dall'ufficio logistico per fissare l'appuntamento di consegna.",
+                        "In attesa di pagamento": "Grazie per averci contattati! Il tuo bonifico è stato ricevuto e verrà contabilizzato entro 2-3 giorni lavorativi. Una volta contabilizzato, verrai contattat{suffix} dall'ufficio logistico per fissare l'appuntamento di consegna.",
+                        "Consegnato": "Grazie per averci contattati! La tua merce è stata consegnata. Se hai bisogno di ulteriori informazioni, non esitare a contattarci."
+                    }
+                    st.session_state.messages.append({"role": "assistant", "content": switch[status].format(suffix=suffix)})
                 else:
                     # If the Code does not correspond to an order, the database_subset will be empty, so the user has not been found
                     st.session_state.messages.append({"role": "assistant", "content": "Il codice inserito non è corretto oppure non è nel sistema."})
